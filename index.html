@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포켓몬 상식 퀴즈</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Noto Sans KR','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:radial-gradient(circle at 30% 20%,#ffe066 0%,#ffb627 45%,#ee5a5a 100%);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;color:#222;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #app{
+    width:100%;max-width:460px;
+    background:#fff;border-radius:28px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25),0 0 0 3px rgba(255,255,255,0.4);
+    overflow:hidden;position:relative;
+  }
+  #app::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:6px;
+    background:linear-gradient(90deg,#ee5a5a 0%,#ee5a5a 50%,#fff 50%,#fff 100%);
+    z-index:2;
+  }
+  #app::after{
+    content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    width:14px;height:14px;border-radius:50%;
+    background:#fff;border:3px solid #c92a2a;z-index:3;
+  }
+  .screen{padding:48px 28px 32px;display:none}
+  .screen.active{display:block;animation:fade .25s ease-out}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* Title */
+  #title{text-align:center}
+  #title .badge{font-size:34px;margin-bottom:8px;display:flex;justify-content:center;gap:14px}
+  #title .badge span{display:inline-block;animation:bob 2.4s ease-in-out infinite}
+  #title .badge span:nth-child(2){animation-delay:.2s}
+  #title .badge span:nth-child(3){animation-delay:.4s}
+  #title .badge span:nth-child(4){animation-delay:.6s}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  #title h1{font-size:24px;margin-bottom:12px;color:#c92a2a;font-weight:800;letter-spacing:-0.5px}
+  #title .subtitle{color:#666;margin-bottom:28px;font-size:14px;line-height:1.7}
+  #title .meta{display:flex;justify-content:center;gap:18px;margin-bottom:28px;color:#868e96;font-size:12px;letter-spacing:1px}
+  #title .meta span{display:flex;align-items:center;gap:4px}
+  .start-btn{
+    width:100%;background:linear-gradient(135deg,#ff6b6b,#c92a2a);
+    color:#fff;border:none;padding:16px;border-radius:16px;
+    font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+    box-shadow:0 6px 16px rgba(201,42,42,0.35);transition:transform .12s
+  }
+  .start-btn:hover{transform:translateY(-2px)}
+  .start-btn:active{transform:scale(.98)}
+
+  /* Quiz */
+  .progress{display:flex;gap:5px;margin-bottom:20px;justify-content:center}
+  .dot{flex:1;max-width:30px;height:6px;background:#f0f0f0;border-radius:3px;transition:background .3s}
+  .dot.done{background:#51cf66}
+  .dot.wrong{background:#ff8787}
+  .dot.current{background:#ffd43b}
+  .qmeta{text-align:center;color:#adb5bd;font-size:11px;margin-bottom:10px;letter-spacing:2px;font-weight:600}
+  .question{font-size:19px;font-weight:700;line-height:1.5;text-align:center;margin-bottom:24px;color:#212529;min-height:60px;display:flex;align-items:center;justify-content:center}
+  .options{display:flex;flex-direction:column;gap:10px}
+  .opt{
+    background:#f8f9fa;border:2px solid #e9ecef;border-radius:14px;
+    padding:14px 16px;text-align:left;font-size:15px;font-family:inherit;
+    font-weight:500;cursor:pointer;transition:all .15s;
+    display:flex;align-items:center;gap:12px;color:#212529;width:100%
+  }
+  .opt:hover:not(:disabled){border-color:#ffd43b;background:#fff9db;transform:translateX(2px)}
+  .opt:disabled{cursor:default}
+  .opt .badge{
+    width:26px;height:26px;background:#dee2e6;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;color:#495057;flex-shrink:0
+  }
+  .opt.correct{border-color:#51cf66;background:#d3f9d8;animation:pop .35s ease-out}
+  .opt.correct .badge{background:#51cf66;color:#fff}
+  .opt.wrong{border-color:#ff6b6b;background:#ffe3e3;animation:shake .35s ease-in-out}
+  .opt.wrong .badge{background:#ff6b6b;color:#fff}
+  .opt.faded{opacity:.45}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+  /* Result */
+  #result{text-align:center}
+  #result .emoji{font-size:54px;margin-bottom:8px}
+  #result .score{font-size:54px;font-weight:800;color:#c92a2a;line-height:1;margin-bottom:6px}
+  #result .score .of{font-size:22px;color:#adb5bd;font-weight:500}
+  #result .tier{font-size:20px;font-weight:800;margin-bottom:4px;color:#212529}
+  #result .tier-desc{color:#868e96;font-size:13px;margin-bottom:24px}
+  #review{margin-bottom:20px;text-align:left;background:#f8f9fa;border-radius:14px;padding:14px 16px}
+  #review h3{font-size:12px;color:#868e96;margin-bottom:10px;font-weight:700;letter-spacing:1px}
+  .rev-item{padding:8px 0;border-bottom:1px solid #e9ecef;font-size:13px}
+  .rev-item:last-child{border-bottom:none}
+  .rev-q{color:#495057;margin-bottom:4px;font-weight:500;line-height:1.4}
+  .rev-a{font-size:12px}
+  .rev-a .ok{color:#2f9e44;font-weight:700}
+  .rev-a .no{color:#c92a2a;font-weight:600;text-decoration:line-through;text-decoration-color:rgba(201,42,42,0.5)}
+  .rev-all-right{text-align:center;color:#2f9e44;font-weight:700;font-size:14px;padding:8px 0}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Title -->
+  <div id="title" class="screen active">
+    <div class="badge"><span>🍃</span><span>🔥</span><span>💧</span><span>⚡</span></div>
+    <h1>포켓몬 상식 퀴즈</h1>
+    <p class="subtitle">포켓몬 이름·타입·도감번호<br>10문제 중 몇 개를 맞힐 수 있을까요?</p>
+    <div class="meta">
+      <span>🎯 10문제</span>
+      <span>⏱ 약 2분</span>
+    </div>
+    <button class="start-btn" id="startBtn">퀴즈 시작!</button>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quiz" class="screen">
+    <div class="progress" id="progress"></div>
+    <div class="qmeta" id="qmeta">QUESTION 1 / 5</div>
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+  </div>
+
+  <!-- Result -->
+  <div id="result" class="screen">
+    <div class="emoji" id="resultEmoji">🎉</div>
+    <div class="score"><span id="scoreNum">0</span><span class="of"> / 10</span></div>
+    <div class="tier" id="tierName"></div>
+    <div class="tier-desc" id="tierDesc"></div>
+    <div id="review"></div>
+    <button class="start-btn" id="retryBtn">다시 도전!</button>
+  </div>
+</div>
+
+<script>
+// ── 50문항 ──────────────────────────────────────────────
+const QUESTIONS = [
+  // 도감번호 → 이름
+  { q:"전국도감 #001번 포켓몬은?", opts:["이상해씨","파이리","꼬부기","피카츄"], a:0 },
+  { q:"전국도감 #004번 포켓몬은?", opts:["파이리","이상해씨","꼬부기","피카츄"], a:0 },
+  { q:"전국도감 #007번 포켓몬은?", opts:["꼬부기","파이리","피카츄","이상해씨"], a:0 },
+  { q:"전국도감 #025번 포켓몬은?", opts:["피카츄","푸린","이브이","삐삐"], a:0 },
+  { q:"전국도감 #150번 포켓몬은?", opts:["뮤츠","뮤","폴리곤2","폴리곤"], a:0 },
+  { q:"전국도감 #151번 포켓몬은?", opts:["뮤","뮤츠","세레비","지라치"], a:0 },
+  { q:"전국도감 #006번 포켓몬은?", opts:["리자몽","리자몬","식스테일","리자뭉"], a:0 },
+  { q:"전국도감 #009번 포켓몬은?", opts:["거북왕","거북킹","왕콘치","잉어킹"], a:0 },
+
+  // 이름 → 타입
+  { q:"피카츄의 타입은?", opts:["전기","불꽃","물","풀"], a:0 },
+  { q:"리자몽의 타입은?", opts:["불꽃·비행","불꽃","드래곤","불꽃·격투"], a:0 },
+  { q:"거북왕의 타입은?", opts:["물","물·얼음","물·강철","물·격투"], a:0 },
+  { q:"이상해꽃의 타입은?", opts:["풀·독","풀","풀·페어리","풀·격투"], a:0 },
+  { q:"갸라도스의 타입은?", opts:["물·비행","물","물·드래곤","악"], a:0 },
+  { q:"잠만보의 타입은?", opts:["노말","격투","노말·격투","땅"], a:0 },
+  { q:"뮤츠의 타입은?", opts:["에스퍼","에스퍼·악","에스퍼·페어리","격투"], a:0 },
+  { q:"라프라스의 타입은?", opts:["물·얼음","물","얼음","물·드래곤"], a:0 },
+  { q:"가디의 타입은?", opts:["불꽃","노말","불꽃·노말","격투"], a:0 },
+  { q:"잉어킹의 타입은?", opts:["물","물·비행","물·드래곤","노말"], a:0 },
+
+  // 진화
+  { q:"이상해씨가 진화하면?", opts:["이상해풀","이상해꽃","이상해유","이상한풀"], a:0 },
+  { q:"파이리가 진화하면?", opts:["리자드","리자몽","파이어","파이어로"], a:0 },
+  { q:"꼬부기가 진화하면?", opts:["어니부기","거북왕","코터스","라프라스"], a:0 },
+  { q:"잉어킹이 진화하면?", opts:["갸라도스","밀로틱","잉어황제","킹드라"], a:0 },
+  { q:"피카츄가 진화하면?", opts:["라이츄","피츄","킹츄","피카왕"], a:0 },
+  { q:"피카츄의 진화 전 모습은?", opts:["피츄","라이츄","베이비츄","꼬마츄"], a:0 },
+  { q:"이브이의 진화형이 아닌 것은?", opts:["윈디","샤미드","쥬피썬더","부스터"], a:0 },
+  { q:"케이시의 최종 진화형은?", opts:["후딘","윤겔라","뮤츠","슬리퍼"], a:0 },
+  { q:"알통몬의 최종 진화형은?", opts:["괴력몬","근육몬","시라소몬","홍수몬"], a:0 },
+  { q:"캐터피의 최종 진화형은?", opts:["버터플","단데기","도나리","콘팡"], a:0 },
+
+  // 타입 상성
+  { q:"불꽃 타입이 효과적인 타입은?", opts:["풀","물","전기","바위"], a:0 },
+  { q:"물 타입이 효과적인 타입은?", opts:["불꽃","전기","풀","비행"], a:0 },
+  { q:"풀 타입이 효과적인 타입은?", opts:["물","불꽃","비행","벌레"], a:0 },
+  { q:"전기 타입이 효과 없는 타입은?", opts:["땅","비행","물","강철"], a:0 },
+  { q:"격투 타입의 약점인 타입은?", opts:["비행","노말","바위","악"], a:0 },
+  { q:"노말 기술이 통하지 않는 타입은?", opts:["고스트","격투","바위","강철"], a:0 },
+  { q:"얼음 타입이 효과적인 타입은?", opts:["드래곤","불꽃","전기","격투"], a:0 },
+  { q:"땅 타입이 효과 없는 타입은?", opts:["비행","전기","불꽃","바위"], a:0 },
+  { q:"갸라도스의 4배 약점은?", opts:["전기","풀","얼음","격투"], a:0 },
+  { q:"에스퍼 타입의 약점인 타입은?", opts:["벌레","노말","불꽃","물"], a:0 },
+
+  // 지방/세대
+  { q:"1세대(적·녹)의 무대 지방은?", opts:["관동","성도","호연","신오"], a:0 },
+  { q:"2세대(금·은)의 무대 지방은?", opts:["성도","관동","호연","가라르"], a:0 },
+  { q:"신오 지방은 몇 세대?", opts:["4세대","3세대","5세대","6세대"], a:0 },
+  { q:"포켓몬 소드·실드의 무대 지방은?", opts:["가라르","알로라","팔데아","칼로스"], a:0 },
+  { q:"포켓몬 스칼렛·바이올렛의 무대 지방은?", opts:["팔데아","가라르","알로라","칼로스"], a:0 },
+  { q:"알로라 지방이 등장한 작품은?", opts:["썬·문","X·Y","소드·실드","다이아·펄"], a:0 },
+
+  // 잡지식
+  { q:"애니메이션 주인공 지우의 첫 파트너 포켓몬은?", opts:["피카츄","이상해씨","파이리","꼬부기"], a:0 },
+  { q:"관동 지방 전설의 새 3종이 아닌 것은?", opts:["루기아","프리져","썬더","파이어"], a:0 },
+  { q:"메타몽의 시그니처 기술은?", opts:["변신","따라하기","흉내내기","흉내쟁기"], a:0 },
+  { q:"1세대 화석에서 부활한 포켓몬이 아닌 것은?", opts:["폴리곤","암나이트","투구","프테라"], a:0 },
+  { q:"포켓몬 시리즈가 처음 출시된 해는?", opts:["1996년","1995년","1997년","1998년"], a:0 },
+  { q:"포켓몬을 제작한 일본 게임 회사는?", opts:["게임프리크","캡콤","코나미","스퀘어에닉스"], a:0 },
+];
+
+// ── 유틸 ──
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function prepQuestion(q){
+  const correct=q.opts[q.a];
+  const shuffled=shuffle(q.opts);
+  return {q:q.q, opts:shuffled, a:shuffled.indexOf(correct)};
+}
+
+// ── 상태 ──
+const TOTAL=10;
+let session=[],curIdx=0,score=0,answered=false,results=[],advanceTimer=null;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz(){
+  if(advanceTimer){clearTimeout(advanceTimer);advanceTimer=null;}
+  session=shuffle(QUESTIONS).slice(0,TOTAL).map(prepQuestion);
+  curIdx=0;score=0;results=[];
+  show('quiz');
+  renderProgress();
+  renderQuestion();
+}
+
+function renderProgress(){
+  const p=document.getElementById('progress');
+  p.innerHTML='';
+  for(let i=0;i<TOTAL;i++){
+    const d=document.createElement('div');
+    d.className='dot';
+    if(i<curIdx) d.classList.add(results[i].correct?'done':'wrong');
+    else if(i===curIdx) d.classList.add('current');
+    p.appendChild(d);
+  }
+}
+
+function renderQuestion(){
+  const q=session[curIdx];
+  document.getElementById('qmeta').textContent=`QUESTION ${curIdx+1} / ${TOTAL}`;
+  document.getElementById('question').textContent=q.q;
+  const opts=document.getElementById('options');
+  opts.innerHTML='';
+  const badges=['A','B','C','D'];
+  q.opts.forEach((text,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt';
+    btn.innerHTML=`<span class="badge">${badges[i]}</span><span>${text}</span>`;
+    btn.onclick=()=>pickAnswer(i);
+    opts.appendChild(btn);
+  });
+  answered=false;
+}
+
+function pickAnswer(picked){
+  if(answered) return;
+  answered=true;
+  const q=session[curIdx];
+  const btns=document.querySelectorAll('.opt');
+  btns.forEach((b,i)=>{
+    b.disabled=true;
+    if(i===q.a) b.classList.add('correct');
+    else if(i===picked) b.classList.add('wrong');
+    else b.classList.add('faded');
+  });
+  const correct=picked===q.a;
+  if(correct) score++;
+  results.push({correct, q:q.q, correctText:q.opts[q.a], pickedText:q.opts[picked]});
+
+  // 자동 진행: 정답은 빠르게, 오답은 정답을 볼 시간을 주기 위해 좀 더 길게
+  const delay = correct ? 1100 : 1700;
+  advanceTimer = setTimeout(advance, delay);
+}
+
+function advance(){
+  advanceTimer=null;
+  curIdx++;
+  if(curIdx>=TOTAL){ showResult(); return; }
+  renderProgress();
+  renderQuestion();
+}
+
+function showResult(){
+  show('result');
+  document.getElementById('scoreNum').textContent=score;
+  const tiers=[
+    {min:10,emoji:'🏆',name:'포켓몬 마스터',desc:'완벽해요! 진정한 트레이너입니다'},
+    {min:8, emoji:'⭐',name:'베테랑 트레이너',desc:'대단해요! 도감을 거의 다 외웠네요'},
+    {min:6, emoji:'🎒',name:'신입 트레이너',desc:'괜찮은 출발! 한 번 더 도전해봐요'},
+    {min:3, emoji:'🌱',name:'초보 트레이너',desc:'시작이 반! 다시 도전해봐요'},
+    {min:0, emoji:'🥚',name:'미부화 알',desc:'포켓몬 도감을 더 익혀봐요'},
+  ];
+  const t=tiers.find(x=>score>=x.min);
+  document.getElementById('resultEmoji').textContent=t.emoji;
+  document.getElementById('tierName').textContent=t.name;
+  document.getElementById('tierDesc').textContent=t.desc;
+
+  const review=document.getElementById('review');
+  const wrongs=results.filter(r=>!r.correct);
+  if(wrongs.length===0){
+    review.innerHTML='<div class="rev-all-right">🎯 모든 문제 정답!</div>';
+  } else {
+    let html='<h3>오답 다시 보기</h3>';
+    wrongs.forEach(r=>{
+      html+=`<div class="rev-item">
+        <div class="rev-q">${r.q}</div>
+        <div class="rev-a"><span class="no">${r.pickedText}</span> → <span class="ok">${r.correctText}</span></div>
+      </div>`;
+    });
+    review.innerHTML=html;
+  }
+}
+
+document.getElementById('startBtn').onclick=startQuiz;
+document.getElementById('retryBtn').onclick=startQuiz;
+</script>
+</body>
+</html>
