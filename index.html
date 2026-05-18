@@ -360,13 +360,14 @@ const QUESTIONS = {
     { q:"이상해꽃의 도감번호는?", opts:["#003","#002","#004","#001"], a:0 },
  
      //천적
-    { q:"아이앤트의 천적은?", opts:["앤티골","아이스크","캐터피","뿔충이"], a:0 },
-    { q:"코산호의 천적은?", opts:["시마사리","사마자르","코터스","해피너스"], a:0 },
-    { q:"아머까오의 천적은?", opts:["두드리짱","스왈로","돈크로우","버랜지나"], a:0 },
-    { q:"텅구리의 천적은?", opts:["버랜지나","지그재구리","왕구리","캥카"], a:0 },
-    { q:"아이앤트의 천적은?", opts:["앤티골","아이스크","캐터피","뿔충이"], a:0 },
-    { q:"아이앤트의 천적은?", opts:["앤티골","아이스크","캐터피","뿔충이"], a:0 },
-
+    { q:"아이앤트의 천적은?", opts:["앤티골","아이스크","캐터피","뿔충이"], a:0, tag:"천적" },
+    { q:"코산호의 천적은?", opts:["시마사리","사마자르","코터스","해피너스"], a:0, tag:"천적" },
+    { q:"아머까오의 천적은?", opts:["두드리짱","스왈로","돈크로우","버랜지나"], a:0, tag:"천적" },
+    { q:"텅구리의 천적은?", opts:["버랜지나","지그재구리","왕구리","캥카"], a:0, tag:"천적" },
+    { q:"멜리시의 천적은?", opts:["깜까미","밀로틱","딱구리","독파리"], a:0, tag:"천적" },
+    { q:"쟝고의 숙적은?", opts:["세비퍼","아보크","사다이사","샤로다"], a:0, tag:"천적" },
+    { q:"루차불의 천적은?", opts:["성원숭","루기아","차오꿀","루카리오"], a:0, tag:"천적" },
+    
 
   ],
 };
@@ -402,7 +403,28 @@ function startQuiz(level){
   if(advanceTimer){clearTimeout(advanceTimer);advanceTimer=null;}
   currentLevel=level;
   const pool=QUESTIONS[level];
-  session=shuffle(pool).slice(0,TOTAL).map(prepQuestion);
+
+  // 중복 제거
+  const seen=new Set();
+  const deduped=pool.filter(q=>{
+    if(seen.has(q.q)) return false;
+    seen.add(q.q);
+    return true;
+  });
+
+  let picked;
+  if(level==='hard'){
+    // 천적 문제 우선 최대 6문제, 나머지는 다른 문제로 채움
+    const tenjeok = shuffle(deduped.filter(q=>q.tag==='천적'));
+    const others  = shuffle(deduped.filter(q=>q.tag!=='천적'));
+    const tenjeokCount = Math.min(tenjeok.length, 6);
+    picked = [...tenjeok.slice(0, tenjeokCount), ...others].slice(0, TOTAL);
+    picked = shuffle(picked); // 뽑은 뒤 순서는 다시 섞기
+  } else {
+    picked = shuffle(deduped).slice(0, TOTAL);
+  }
+
+  session = picked.map(prepQuestion);
   curIdx=0;score=0;results=[];
   show('quiz');
   renderProgress();
